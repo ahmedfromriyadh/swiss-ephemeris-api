@@ -19,7 +19,6 @@ def health():
 @app.post("/api/v1/calculate")
 def calculate(data: dict):
     try:
-        # Extract data
         year = int(data.get("year"))
         month = int(data.get("month"))
         day = int(data.get("day"))
@@ -28,11 +27,8 @@ def calculate(data: dict):
         lat = float(data.get("lat"))
         lon = float(data.get("lon"))
         
-        # Calculate Julian Day
         jd = swe.julday(year, month, day, hour + minute/60)
-        
-        # Use simple flags - just speed calculation
-        flag = swe.FLG_SPEED | swe.FLG_SWIEPH
+        flag = swe.FLG_SPEED
         
         planets = {}
         p_map = {
@@ -49,21 +45,11 @@ def calculate(data: dict):
         signs = ['الحمل','الثور','الجوزاء','السرطان','الأسد','العذراء','الميزان','العقرب','القوس','الجدي','الدلو','الحوت']
         
         for k, pid in p_map.items():
-            # Calculate planet position
-            result = swe.calc_ut(jd, pid, flag)
+            res = swe.calc_ut(jd, pid, flag)
+            # res[0] is the array [lon, lat, dist, speed...]
+            # res[1] is the error string
+            lon_val = float(res[0][0])  # ← This is the fix!
             
-            # result is a tuple: (longitude, latitude, distance, speed)
-            # Extract longitude (first element)
-            if isinstance(result, tuple) and len(result) >= 1:
-                lon_val = result[0]
-            else:
-                lon_val = result
-            
-            # Ensure it's a number
-            if not isinstance(lon_val, (int, float)):
-                raise ValueError(f"Invalid longitude for {k}: {type(lon_val)}")
-            
-            # Normalize to 0-360
             lon_norm = lon_val % 360
             sign_idx = int(lon_norm // 30)
             deg = lon_norm % 30
@@ -74,22 +60,12 @@ def calculate(data: dict):
                 "degree": round(deg, 4), 
                 "longitude": round(lon_norm, 6)
             }
-        
-        # Calculate Houses using Placidus system
+            
         # houses_ex returns (cusps, ascmc)
-        house_result = swe.houses_ex(jd, lat, lon, b'P', flag)
+        cusps, ascmc = swe.houses_ex(jd, lat, lon, "P".encode(), flag)
         
-        if isinstance(house_result, tuple) and len(house_result) >= 2:
-            cusps, ascmc = house_result
-        else:
-            raise ValueError(f"Invalid houses result: {type(house_result)}")
-        
-        # Extract Ascendant and MC
-        if isinstance(ascmc, (list, tuple)) and len(ascmc) >= 2:
-            asc_lon = float(ascmc[0]) % 360
-            mc_lon = float(ascmc[1]) % 360
-        else:
-            raise ValueError(f"Invalid ascmc result: {type(ascmc)}")
+        asc_lon = float(ascmc[0]) % 360
+        mc_lon = float(ascmc[1]) % 360
         
         asc_sign_idx = int(asc_lon // 30)
         mc_sign_idx = int(mc_lon // 30)
@@ -109,4 +85,5 @@ def calculate(data: dict):
             }
         }
     except Exception as e:
-       
+        import traceback
+        return {"success": False, "error": str(e), "traceback": traceback.format_exc()}
