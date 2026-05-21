@@ -21,7 +21,7 @@ def calculate(data: dict):
     try:
         jd = swe.julday(data["year"], data["month"], data["day"], 
                         data["hour"] + data["minute"]/60)
-        flag = swe.FLG_SPEED | swe.FLG_SIDBIT
+        flag = swe.FLG_SPEED
         
         planets = {}
         p_map = {"sun": swe.SUN, "moon": swe.MOON, "mercury": swe.MERCURY,
