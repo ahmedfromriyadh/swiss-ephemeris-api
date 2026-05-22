@@ -15,18 +15,19 @@ def download_file(url, filename):
         return False
 
 def main():
-    # ✅ IMPORTANT: Use current working directory (writable on Render)
+    # ✅ Use current working directory (writable on Render)
     eph_dir = os.path.join(os.getcwd(), 'eph')
     os.makedirs(eph_dir, exist_ok=True)
     
-    # Files to download
+    # Files to download (Swiss Ephemeris files are in /se1/ subdirectory)
     files_to_download = [
-        'se1_100.se1',
-        'se1_200.se1',
-        'se1_300.se1',
+        'se1_100.se1',  # 1900-1999
+        'se1_200.se1',  # 2000-2099
+        'se1_300.se1',  # 2100-2199
     ]
     
-    base_url = 'https://www.astro.com/ftp/swisseph/ephe'
+    # ✅ CORRECT URL: Files are in /se1/ subdirectory
+    base_url = 'https://www.astro.com/ftp/swisseph/ephe/se1'
     
     success = True
     for filename in files_to_download:
