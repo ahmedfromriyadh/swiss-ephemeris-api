@@ -3,11 +3,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 import swisseph as swe
 from datetime import datetime
-import json
+import os
 
 app = FastAPI()
 
-# CORS - Allow all origins
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -15,7 +14,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-MOSEPH_FLAG = swe.FLG_SPEED | swe.FLG_MOSEPH
+# Set ephemeris path to our downloaded files
+eph_path = os.path.join(os.getcwd(), 'eph')
+swe.set_ephe_path(eph_path)
+
+print(f"✅ Ephemeris path set to: {eph_path}")
 
 @app.get("/health")
 async def health():
@@ -24,7 +27,6 @@ async def health():
 @app.post("/api/v1/calculate")
 async def calculate(request: Request):
     try:
-        # Manually parse JSON body
         body = await request.json()
         
         year = int(body.get("year"))
@@ -35,8 +37,10 @@ async def calculate(request: Request):
         lat = float(body.get("lat"))
         lon = float(body.get("lon"))
         
-        # Calculate Julian Day (UT)
         jd = swe.julday(year, month, day, hour + minute/60)
+        
+        # Use standard Swiss Ephemeris flags
+        flag = swe.FLG_SPEED
         
         planets = {}
         p_map = {
@@ -52,9 +56,8 @@ async def calculate(request: Request):
         }
         signs = ['الحمل','الثور','الجوزاء','السرطان','الأسد','العذراء','الميزان','العقرب','القوس','الجدي','الدلو','الحوت']
         
-        # Calculate each planet
         for k, pid in p_map.items():
-            res = swe.calc_ut(jd, pid, MOSEPH_FLAG)
+            res = swe.calc_ut(jd, pid, flag)
             lon_val = float(res[0][0])
             
             lon_norm = lon_val % 360
@@ -68,8 +71,7 @@ async def calculate(request: Request):
                 "longitude": round(lon_norm, 6)
             }
         
-        # Calculate houses
-        cusps, ascmc = swe.houses_ex(jd, lat, lon, b"P", MOSEPH_FLAG)
+        cusps, ascmc = swe.houses_ex(jd, lat, lon, b"P", flag)
         
         asc_lon = float(ascmc[0]) % 360
         mc_lon = float(ascmc[1]) % 360
@@ -95,7 +97,3 @@ async def calculate(request: Request):
             status_code=500,
             content={"success": False, "error": str(e), "traceback": traceback.format_exc()}
         )
-
-@app.on_event("startup")
-async def startup_event():
-    print(f"✅ Swiss Ephemeris API started | MOSEPH mode active")
