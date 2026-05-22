@@ -1,7 +1,3 @@
 #!/bin/bash
-
-# No download needed - using built-in ephemeris
-echo "✓ Starting with built-in Swiss Ephemeris data"
-
-# Start the application
+echo "✅ Starting Swiss Ephemeris API with built-in MOSEPH ephemeris"
 uvicorn app:app --host 0.0.0.0 --port $PORT
