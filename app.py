@@ -6,9 +6,8 @@ import os
 
 app = FastAPI()
 
-# ✅ Set ephemeris path to writable directory
-eph_path = os.path.join(os.getcwd(), 'eph')
-swe.set_ephe_path(eph_path)
+# ✅ REMOVE or COMMENT OUT this line (built-in ephemeris will be used):
+# swe.set_ephe_path(os.path.join(os.getcwd(), 'eph'))
 
 app.add_middleware(
     CORSMiddleware,
