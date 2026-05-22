@@ -6,8 +6,9 @@ import os
 
 app = FastAPI()
 
-# Set ephemeris path - files will be in /app/eph
-swe.set_ephe_path('/app/eph')
+# ✅ Set ephemeris path to writable directory
+eph_path = os.path.join(os.getcwd(), 'eph')
+swe.set_ephe_path(eph_path)
 
 app.add_middleware(
     CORSMiddleware,
