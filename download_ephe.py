@@ -15,15 +15,15 @@ def download_file(url, filename):
         return False
 
 def main():
-    # Create eph directory
-    eph_dir = '/app/eph'
+    # ✅ Use writable directory: current directory + /eph
+    eph_dir = os.path.join(os.getcwd(), 'eph')
     os.makedirs(eph_dir, exist_ok=True)
     
-    # Files to download (covering years 1900-2100)
+    # Files to download
     files_to_download = [
-        'se1_100.se1',  # 1900-1999
-        'se1_200.se1',  # 2000-2099
-        'se1_300.se1',  # 2100-2199 (extra range)
+        'se1_100.se1',
+        'se1_200.se1',
+        'se1_300.se1',
     ]
     
     base_url = 'https://www.astro.com/ftp/swisseph/ephe'
@@ -36,7 +36,7 @@ def main():
             success = False
     
     if success:
-        print("✓ All ephemeris files downloaded successfully!")
+        print(f"✓ All ephemeris files downloaded to {eph_dir}!")
         return 0
     else:
         print("✗ Some files failed to download")
