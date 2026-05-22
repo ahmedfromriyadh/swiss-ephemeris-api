@@ -3,7 +3,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 import swisseph as swe
 from datetime import datetime
-import os
 
 app = FastAPI()
 
@@ -14,11 +13,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Set ephemeris path to our downloaded files
-eph_path = os.path.join(os.getcwd(), 'eph')
-swe.set_ephe_path(eph_path)
-
-print(f"✅ Ephemeris path set to: {eph_path}")
+# ✅ IMPORTANT: Do NOT set ephemeris path - use built-in data
+# This avoids all file download issues
 
 @app.get("/health")
 async def health():
@@ -39,21 +35,26 @@ async def calculate(request: Request):
         
         jd = swe.julday(year, month, day, hour + minute/60)
         
-        # Use standard Swiss Ephemeris flags
+        # ✅ Use built-in ephemeris (no external files)
         flag = swe.FLG_SPEED
         
         planets = {}
+        
+        # 🌟 PLANETS THAT WORK WITH BUILT-IN EPHEMERIS (no asteroids)
         p_map = {
             "sun": swe.SUN, "moon": swe.MOON, "mercury": swe.MERCURY,
             "venus": swe.VENUS, "mars": swe.MARS, "jupiter": swe.JUPITER,
             "saturn": swe.SATURN, "uranus": swe.URANUS, "neptune": swe.NEPTUNE,
-            "pluto": swe.PLUTO, "node": swe.MEAN_NODE, "chiron": swe.CHIRON
+            "pluto": swe.PLUTO, "node": swe.MEAN_NODE
+            # ❌ REMOVED: "chiron": swe.CHIRON (requires asteroid files)
         }
+        
         ar_names = {
             "sun":"الشمس","moon":"القمر","mercury":"عطارد","venus":"الزهرة",
             "mars":"المريخ","jupiter":"المشتري","saturn":"زحل","uranus":"أورانوس",
-            "neptune":"نبتون","pluto":"بلوتو","node":"عقدة الشمال","chiron":"تشيرون"
+            "neptune":"نبتون","pluto":"بلوتو","node":"عقدة الشمال"
         }
+        
         signs = ['الحمل','الثور','الجوزاء','السرطان','الأسد','العذراء','الميزان','العقرب','القوس','الجدي','الدلو','الحوت']
         
         for k, pid in p_map.items():
@@ -71,6 +72,7 @@ async def calculate(request: Request):
                 "longitude": round(lon_norm, 6)
             }
         
+        # Calculate houses (works with built-in ephemeris)
         cusps, ascmc = swe.houses_ex(jd, lat, lon, b"P", flag)
         
         asc_lon = float(ascmc[0]) % 360
