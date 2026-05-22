@@ -3,11 +3,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 import swisseph as swe
 from datetime import datetime
-import os
+from pydantic import BaseModel
 
 app = FastAPI()
 
-# ✅ CORS - Allow all origins for development
+# CORS - Allow all origins
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -15,8 +15,17 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# ✅ IMPORTANT: Use built-in Moshier ephemeris (no external files needed)
-# This flag tells Swiss Ephemeris to use internal calculations
+# Define request body model
+class AstroRequest(BaseModel):
+    year: int
+    month: int
+    day: int
+    hour: int
+    minute: int
+    lat: float
+    lon: float
+
+# MOSEPH flag for built-in ephemeris
 MOSEPH_FLAG = swe.FLG_SPEED | swe.FLG_MOSEPH
 
 @app.get("/health")
@@ -24,19 +33,11 @@ async def health():
     return {"status": "ok", "time": datetime.utcnow().isoformat()}
 
 @app.post("/api/v1/calculate")
-async def calculate(request: Request, data: dict):
+async def calculate(request: AstroRequest):
     try:
-        # Extract and validate input
-        year = int(data.get("year"))
-        month = int(data.get("month"))
-        day = int(data.get("day"))
-        hour = int(data.get("hour"))
-        minute = int(data.get("minute"))
-        lat = float(data.get("lat"))
-        lon = float(data.get("lon"))
-        
         # Calculate Julian Day (UT)
-        jd = swe.julday(year, month, day, hour + minute/60)
+        jd = swe.julday(request.year, request.month, request.day, 
+                       request.hour + request.minute/60)
         
         planets = {}
         p_map = {
@@ -52,12 +53,11 @@ async def calculate(request: Request, data: dict):
         }
         signs = ['الحمل','الثور','الجوزاء','السرطان','الأسد','العذراء','الميزان','العقرب','القوس','الجدي','الدلو','الحوت']
         
-        # Calculate each planet using MOSEPH (built-in ephemeris)
+        # Calculate each planet
         for k, pid in p_map.items():
             res = swe.calc_ut(jd, pid, MOSEPH_FLAG)
-            lon_val = float(res[0][0])  # [0][0] = longitude
+            lon_val = float(res[0][0])
             
-            # Normalize to 0-360°
             lon_norm = lon_val % 360
             sign_idx = int(lon_norm // 30)
             deg = lon_norm % 30
@@ -69,8 +69,8 @@ async def calculate(request: Request, data: dict):
                 "longitude": round(lon_norm, 6)
             }
         
-        # Calculate houses (Ascendant & MC)
-        cusps, ascmc = swe.houses_ex(jd, lat, lon, b"P", MOSEPH_FLAG)
+        # Calculate houses
+        cusps, ascmc = swe.houses_ex(jd, request.lat, request.lon, b"P", MOSEPH_FLAG)
         
         asc_lon = float(ascmc[0]) % 360
         mc_lon = float(ascmc[1]) % 360
@@ -97,7 +97,6 @@ async def calculate(request: Request, data: dict):
             content={"success": False, "error": str(e), "traceback": traceback.format_exc()}
         )
 
-# Handle 404 for undefined routes
 @app.on_event("startup")
 async def startup_event():
-    print(f"✅ Swiss Ephemeris API started | MOSEPH mode: Built-in ephemeris active")
+    print(f"✅ Swiss Ephemeris API started | MOSEPH mode active")
