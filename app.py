@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 import swisseph as swe
 from datetime import datetime
-from pydantic import BaseModel
+import json
 
 app = FastAPI()
 
@@ -15,17 +15,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Define request body model
-class AstroRequest(BaseModel):
-    year: int
-    month: int
-    day: int
-    hour: int
-    minute: int
-    lat: float
-    lon: float
-
-# MOSEPH flag for built-in ephemeris
 MOSEPH_FLAG = swe.FLG_SPEED | swe.FLG_MOSEPH
 
 @app.get("/health")
@@ -33,11 +22,21 @@ async def health():
     return {"status": "ok", "time": datetime.utcnow().isoformat()}
 
 @app.post("/api/v1/calculate")
-async def calculate(request: AstroRequest):
+async def calculate(request: Request):
     try:
+        # Manually parse JSON body
+        body = await request.json()
+        
+        year = int(body.get("year"))
+        month = int(body.get("month"))
+        day = int(body.get("day"))
+        hour = int(body.get("hour"))
+        minute = int(body.get("minute"))
+        lat = float(body.get("lat"))
+        lon = float(body.get("lon"))
+        
         # Calculate Julian Day (UT)
-        jd = swe.julday(request.year, request.month, request.day, 
-                       request.hour + request.minute/60)
+        jd = swe.julday(year, month, day, hour + minute/60)
         
         planets = {}
         p_map = {
@@ -70,7 +69,7 @@ async def calculate(request: AstroRequest):
             }
         
         # Calculate houses
-        cusps, ascmc = swe.houses_ex(jd, request.lat, request.lon, b"P", MOSEPH_FLAG)
+        cusps, ascmc = swe.houses_ex(jd, lat, lon, b"P", MOSEPH_FLAG)
         
         asc_lon = float(ascmc[0]) % 360
         mc_lon = float(ascmc[1]) % 360
