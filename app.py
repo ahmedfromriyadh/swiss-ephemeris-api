@@ -2,8 +2,12 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import swisseph as swe
 from datetime import datetime
+import os
 
 app = FastAPI()
+
+# Set ephemeris path - files will be in /app/eph
+swe.set_ephe_path('/app/eph')
 
 app.add_middleware(
     CORSMiddleware,
@@ -46,9 +50,7 @@ def calculate(data: dict):
         
         for k, pid in p_map.items():
             res = swe.calc_ut(jd, pid, flag)
-            # res[0] is the array [lon, lat, dist, speed...]
-            # res[1] is the error string
-            lon_val = float(res[0][0])  # ← This is the fix!
+            lon_val = float(res[0][0])
             
             lon_norm = lon_val % 360
             sign_idx = int(lon_norm // 30)
@@ -61,7 +63,6 @@ def calculate(data: dict):
                 "longitude": round(lon_norm, 6)
             }
             
-        # houses_ex returns (cusps, ascmc)
         cusps, ascmc = swe.houses_ex(jd, lat, lon, "P".encode(), flag)
         
         asc_lon = float(ascmc[0]) % 360
