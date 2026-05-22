@@ -15,7 +15,7 @@ def download_file(url, filename):
         return False
 
 def main():
-    # ✅ Use writable directory: current directory + /eph
+    # ✅ IMPORTANT: Use current working directory (writable on Render)
     eph_dir = os.path.join(os.getcwd(), 'eph')
     os.makedirs(eph_dir, exist_ok=True)
     
